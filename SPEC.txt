@@ -1,0 +1,38 @@
+
+how to define tiles:
+
+2 VBOs:
+VBO 1 contains vertices as 3 floating point values
+VBO 2 contains indices for vertex's color as a single byte
+
+both are combined into a VAO that is stored in a array of tiles
+
+each array of tiles contains 256 VAOs
+s.t. they can be indexed with a single byte
+tile 0 is always clear
+
+the palette to use are passed to the vertex shader as a uniform of 3 vec3
+[!] indeed, color 0 is always clear, and colors 1,2,3 are always opaque
+
+
+
+voxel NES fantasy console:
+
+screen res = 128×128×128
+2 screen buffers = 16×16×16 tiles
+
+64 sprites
+sprite res = 8×8×8
+
+8 palettes of 4 colors
+color 0 is always clear
+
+
+
+==== TODO: figure out something that makes sense...
+assembly like with 8 registers: A B C D W X Y Z
+only operate on 16bits words
+str A  in @0xFFFF
+str 10 in A
+cmp A B in D
+add A B in C
