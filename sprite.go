@@ -12,12 +12,6 @@ import (
 )
 
 
-const (
-    nbCoords = 3
-    nbAxises = 3
-)
-
-
 // Sprite to place on the screen
 type Sprite struct {
     // indices of tile and palette
@@ -25,12 +19,12 @@ type Sprite struct {
     id_pal  uint
 
     // transforms to apply to the mesh
-    pos  [nbCoords]int  // position the mesh in the space of the screen
-    flip [nbAxises]bool // flip the mesh along the X, Y or Z axises
-    turn [nbAxises]uint // rotate the mesh around the X, Y or Z axises
+    pos Byte3 // position of the mesh
+    rot Byte3 // rotate the mesh
+    mrr Bool3 // flip the mesh
 
     // OpenGL components to draw the associated mesh
-    vbo  uint32 // Vertex Buffer Object
+    vbo  uint32   // Vertex Buffer Object
     pal *Palette  // pointer to the palette used
 }
 
