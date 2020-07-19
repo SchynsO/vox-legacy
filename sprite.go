@@ -19,9 +19,9 @@ type Sprite struct {
     id_pal  uint
 
     // transforms to apply to the mesh
-    pos Byte3 // position of the mesh
-    rot Byte3 // rotate the mesh
-    mrr Bool3 // flip the mesh
+    pos Vector3 // position of the mesh
+    rot Byte3   // rotate the mesh
+    mir Bool3   // flip the mesh
 
     // OpenGL components to draw the associated mesh
     vbo  uint32   // Vertex Buffer Object
@@ -38,7 +38,7 @@ func (sprite Sprite) Draw () {
 
 
 // set a new tile to this sprite
-func (sprite Sprite) SetTile (id uint, tile Tile) {
+func (sprite Sprite) SetTile (id uint, tile *Tile) {
     sprite.id_tile = id
     sprite.vbo = tile.VBO
 }
