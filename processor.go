@@ -8,7 +8,7 @@ import (
 
 type Processor struct {
     reg  [4]uint8 // A, X, Y, Z
-    flag [4]bool  // zero, overflow, carry, negative
+    flag [4]bool  // zero, negative, carry, overflow
     ptr     uint
     ram    *Memory
     stack  *Stack
@@ -33,16 +33,21 @@ func (cpu Processor) Cycle () {
                 cpu.reg[ 0 ] = uint8(cpu.readMR(inst))
             }
         } else if inst < 0x54 { // LOD
+            var val uint
             if inst < 0x4C        { // LOD in registers
                 addr := cpu.ram.GetAddress(cpu.ptr)
-                cpu.reg[reg] = uint8(cpu.ram.GetByte(addr))
+                val   = cpu.ram.GetByte(addr)
+                cpu.reg[reg] = uint8(val)
                 cpu.ptr += 2
             } else if inst < 0x50 { // LOD with indexing
-                cpu.reg[ 0 ] = uint8(cpu.readMR(inst))
+                val = cpu.readMR(inst)
+                cpu.reg[ 0 ] = uint8(val)
             } else                { // LOD numbers
-                cpu.reg[reg] = uint8(cpu.ram.GetByte(cpu.ptr))
+                val = cpu.ram.GetByte(cpu.ptr)
+                cpu.reg[reg] = uint8(val)
                 cpu.ptr += 1
             }
+            cpu.upFlags(val)
         } else if inst < 0x58 { // PSH
             cpu.stack.Push(cpu.reg[reg])
         } else if inst < 0x5C { // PLL
@@ -58,22 +63,18 @@ func (cpu Processor) Cycle () {
         } else if inst < 0x70 { // TRS
             reg2 := (inst & 0xC) >> 2
             cpu.reg[reg] = cpu.reg[reg2]
-        } else if inst < 0x78 { // INC
-            cpu.writeMR(inst, cpu.readMR(inst) + 1)
-        } else if inst < 0x80 { // DEC
-            cpu.writeMR(inst, cpu.readMR(inst) - 1)
-        } else if inst < 0x88 { // SHL
-            cpu.writeMR(inst, cpu.readMR(inst) << 1)
-        } else if inst < 0x90 { // SHR
-            cpu.writeMR(inst, cpu.readMR(inst) >> 1)
-        } else if inst < 0x98 { // ROL
-            read := uint8(cpu.readMR(inst))
-            cpu.writeMR(inst, uint(bits.RotateLeft8(read,  1)))
-        } else if inst < 0xA0 { // ROR
-            read := uint8(cpu.readMR(inst))
-            cpu.writeMR(inst, uint(bits.RotateLeft8(read, -1)))
-        } else                { // NOT
-            cpu.writeMR(inst, ^cpu.readMR(inst))
+        } else if inst < 0xA8 { // unary operations
+            val := cpu.readMR(inst)
+            if        inst < 0x78 { val  += 1 // INC
+            } else if inst < 0x80 { val  -= 1 // DEC
+            } else if inst < 0x88 { val <<= 1 // SHL
+            } else if inst < 0x90 { val >>= 1 // SHR
+            } else if inst < 0x98 { val = uint(bits.RotateLeft8(uint8(val),  1)) // ROL
+            } else if inst < 0xA0 { val = uint(bits.RotateLeft8(uint8(val), -1)) // ROR
+            } else                { val = ^val // NOT
+            }
+            cpu.writeMR(inst, val)
+            cpu.upFlags(val)
         }
     } else if between(0xB0, inst, 0xF0) {
         if        inst < 0xB8 { // BRC
@@ -89,18 +90,19 @@ func (cpu Processor) Cycle () {
             cpu.flag[reg] = true
         } else if inst < 0xC0 { // CLR
             cpu.flag[reg] = false
-        } else if inst < 0xC8 { // ADD
-            cpu.reg[0] += uint8(cpu.readMR(inst))
-        } else if inst < 0xD0 { // SUB
-            cpu.reg[0] -= uint8(cpu.readMR(inst))
-        } else if inst < 0xD8 { // AND
-            cpu.reg[0] &= uint8(cpu.readMR(inst))
-        } else if inst < 0xE0 { // IOR
-            cpu.reg[0] |= uint8(cpu.readMR(inst))
-        } else if inst < 0xE8 { // XOR
-            cpu.reg[0] ^= uint8(cpu.readMR(inst))
-        } else                { // CMP
-            // TODO...
+        } else if inst < 0xE8 { // operations that store result in accumulator
+            val1 := uint(cpu.reg[0])
+            val2 := cpu.readMR(inst)
+            if        inst < 0xC8 { val1 += val2 // ADD
+            } else if inst < 0xD0 { val1 -= val2 // SUB
+            } else if inst < 0xD8 { val1 &= val2 // AND
+            } else if inst < 0xE0 { val1 |= val2 // IOR
+            } else                { val1 ^= val2 // XOR
+            }
+            cpu.reg[0] = uint8(val1)
+            cpu.upFlags(val1)
+        } else { // CMP
+
         }
     }
 }
@@ -136,6 +138,14 @@ func (cpu Processor) writeMR (inst, value uint) {
         }
         cpu.ptr += 2
     }
+}
+
+
+// set base flags
+func (cpu Processor) upFlags (value uint) {
+    cpu.flag[0] = value == 0
+    cpu.flag[1] = (value & 0x080) != 0
+    cpu.flag[2] = (value & 0x100) != 0
 }
 
 
